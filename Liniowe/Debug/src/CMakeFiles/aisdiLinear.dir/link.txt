@@ -1,0 +1,1 @@
+/usr/bin/c++    --std=c++11 -Wall -pedantic -Wextra -Werror -g -O0 -g3   CMakeFiles/aisdiLinear.dir/main.cpp.o  -o aisdiLinear -rdynamic 

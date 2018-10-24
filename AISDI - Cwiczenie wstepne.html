@@ -1,0 +1,59 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+</head>
+<body>
+<h1 id="aisdi---laboratorium-wstępne">AISDI - Laboratorium wstępne</h1>
+<h2 id="cel-laboratorium">Cel laboratorium</h2>
+<p>Zapoznanie się z narzędziami przydatnymi przy realizacji kolejnych ćwiczeń.</p>
+<p>Zaprezentowane narzędzia znajdują zastosowanie nie tylko w ramach tych ćwiczeń, ale stanowią podstawę warsztatu dobrego programisty.</p>
+<p>Istnieje wiele systemów ułatwiających współpracę z przedstawionymi narzędziami, ale celem laboratorium jest przekazanie pewnej ogólnej idei badania działania programu, a nie nauka obsługi konkretnych narzędzi (zwłaszcza, że różne języki/środowiska zawierają inne narzędzia, jednakże zawsze realizujące zadania podobne do poniższych).</p>
+<h2 id="przebieg-ćwiczenia">Przebieg ćwiczenia</h2>
+<ol style="list-style-type: decimal">
+<li><p>Przygotowanie środowiska</p>
+<p>Każdy normalny projekt informatyczny składa się z więcej niż jednego pliku. Proszę przygotować swoje ulubione środowisko (CodeBlocks, vim + make, itp.), tak aby był w nim projekt zawierający co najmniej 3 pliki: <code>main.cpp</code>, <code>MyClass.cpp</code>, <code>MyClass.h</code> (zamiast <code>MyClass</code> proszę wymyślić jakąkolwiek prostą klasę (<code>Car</code>, <code>Box</code>, itp.), funkcja <code>main</code> powinna być zaimplementowana w pliku <code>main.cpp</code> i w jakiś sposób używać wprowadzonej klasy.</p>
+Należy zadbać, aby projekt budował się z wykorzystaniem C++11 i zawierał co najmniej dwie konfiguracje:
+<ul>
+<li>Debug - z symbolami debugowymi i bez optymalizacji (<code>-g -O0</code> w gcc)</li>
+<li>Release - bez symboli i z optymalizacją (<code>-O2</code> w gcc)</li>
+</ul></li>
+<li><p>Testy jednostkowe</p>
+<p>Do projektu należy dodać wsparcie dla testów jednostkowych. W ramach tego laboratorium najwygodniejsze może być wykorzystanie dostępnej biblioteki z pakietu Boost. Przykład działającej konfiguracji z laboratoriów PROI jest dostępny <a href="https://gitlab.zoak.ii.pw.edu.pl/kgrochowski/PROI">tutaj</a>.</p>
+<p>W przykładzie wykorzystane są Makefile'e, ale można wykorzystać widoczne w nich opcje do poprawnego skonfigurowania np. IDE CodeBlocks.</p>
+<p>Ważne: zazwyczaj testy jednostkowe buduje się niezależnie od głównej aplikacji (projekt buduje wtedy co najmniej dwa pliki wykonywalne). Dla uproszczenia można tak zmodyfikować <code>main.cpp</code>, żeby budował tylko testy jednostkowe (testowanie algorytmów i struktur nie wymaga istnienia programu, testy jednostkowe zazwyczaj wystarczają).</p>
+<p>W celu weryfikacji poprawnej konfiguracji należy napisać w nowym pliku <code>MyClassTests.cpp</code> dowolny przechodzący test jednostkowy.</p></li>
+<li><p>Błąd krytyczny w aplikacji</p>
+<p>W istniejącym projekcie należy doprowadzić do wystąpienia błędu krytycznego aplikacji, np. poprzez próbę dostępu do zastrzeżonych fragmentów pamięci. Na przykład - dostęp do obiektu zwolnionego wcześniej operacją <code>delete</code>, próba wywołania metody wirtualnej na wskaźniku o wartości <code>nullptr</code>, sięgnięcie do obszaru poza granicami zaalokowanej tablicy itp. itd. Efektem próby uruchomienia programu powinno być uzyskanie komunikatu o jej błędzie od systemu operacyjnego (np. <code>Segmentation fault</code>).</p>
+<p>Oczywiście zazwyczaj programista nie jest świadomy, gdzie jest umiejscowiony błąd w kodzie, powodujący takie efekty działania aplikacji. Często wygodnymi narzędziami do znalezienia źródła takich problemów są różnego typu tzw. debuggery. Najprostszym z nich jest <code>gdb</code>. Aby zdiagnozować w nim taki problem wystarczy uruchomić go poleceniem <code>gdb ./nazwa_programu_do_badania</code>, następnie w jego konsoli wykonać polecenie <code>run</code>, uruchamiające badany program. Gdy nastąpi jego błąd, <code>gdb</code> zatrzyma się. Można wtedy uzyskać ścieżkę wywołań, która doprowadziła do tego błędu, wpisując polecenie <code>bt</code>. Korzystając z polecenia np. <code>print</code> można popodglądać wartości lokalnych zmiennych.</p>
+<p>Ważne: proszę porównać efekty pracy z narzędziem <code>gdb</code> w zależności od wykorzystanej konfiguracji kompilacji (Debug vs. Release). Powinno to wyjaśnić, czemu stosuje się często takie dwie kompilacje: Debug dla programistów, Release dla klienta.</p>
+<p>Dla zainteresowanych: proszę spróbować włączyć symbole debugowe w kompilacji z optymalizacją i spróbować obejrzeć wtedy, co się dzieje przy próbie użycia <code>gdb</code> (wysokie prawdopodobieństwo pozornie losowych przejść pomiędzy liniami programu).</p>
+<p>Takie narzędzia, jak <code>gdb</code> są pożyteczne, gdy dostęp do programu jest tylko przez konsolę (np. zdalne podłączenie po SSH do serwera klienta). Przy normalnej pracy wygodniejsze jest skorzystanie z narzędzi graficznych. Prostym opakowaniem na <code>gdb</code> jest program <code>ddd</code>. IDE CodeBlocks także wspiera uruchomienie programu w trybie debug i obserwację jego zachowania.</p>
+W wybranym przez siebie środowisku należy przećwiczyć:
+<ul>
+<li>obserwację efektów błędu programu,</li>
+<li>podglądanie wartości zmiennych,</li>
+<li>umieszczanie punktów wstrzymania aplikacji (brakpoint).</li>
+</ul>
+<p>Proszę pamiętać, że na kolejnych laboratoriach programy, które będą się tak zachowywać (zamykać z błędem), nie będą oceniane. Dlatego warto zapoznać się z narzędziami pozwalającymi usunąć takie błędy.</p></li>
+<li><p>Problemy z zarządzaniem zasobami aplikacji</p>
+<p>Programy zaprezentowane w poprzednim punkcie wykorzystują możliwości nadzoru nad uruchomioną aplikacją, udostępnione przez system operacyjny. Pozwala to na badanie aplikacji w jej &quot;naturalnym środowisku&quot;, ale nie pozwala wykryć pewnych rodzajów błędów. W tym celu między innymi istnieją systemy wykorzystujące tzw. instrumentację czy symulację, czyli uruchamiające badaną aplikację w środowisku pozwalającym na lepszą obserwację zachowania programu. Na przykład, podmieniając biblioteczne funkcje <code>malloc</code> i <code>free</code>, można śledzić wycieki pamięci. Między innymi tym zajmuje się program <code>valgrind</code>.</p>
+<p>Na początku proszę użyć <code>valgrind --tool=memcheck ./badana_aplikacja</code> na aplikacji z poprzedniego punktu. Narzędzie powinno wyświetlić raport o podobnej zawartości do wywołania debuggera. Zauważalne powinno być też zwiększenie czasu wykonania programu - <code>valgrind</code> wprowadza dodatkową warstwę pomiędzy system operacyjny i aplikację, znacząco zmniejszając jej wydajność.</p>
+<p>Następnie należ naprawić aplikację z poprzedniego punktu, a po czym doprowadzić w niej do wycieku pamięci (<code>new</code> bez <code>delete</code>).</p>
+<p>Wywołując <code>valgrind --tool=memcheck --leak-check=full ./aplikacja</code> proszę zaobserwować wyniki zwracane przez narzędzie. Zazwyczaj są wystarczające by odnaleźć większość wycieków w aplikacji. Niestety zdarzają się też raporty o fałszywych wyciekach, ale każdy warto przeanalizować.</p>
+<p>Wszystkie kolejne projekty powinny być sprawdzone przy użyciu <code>valgrind</code>a na obecność wycieków. Wykrycie wycieku pamięci przez prowadzącego będzie skutkowało znaczącym obcięciem punktów, z niezaliczeniem ćwiczenia włącznie.</p></li>
+<li><p>Profilowanie aplikacji</p>
+<p>Często ważny aspektem podczas wyboru odpowiedniego algorytmu, bądź struktury danych, jest wydajność danego rozwiązania. Podstawowa zasada optymalizacji brzmi: najpierw zmierzyć, potem optymalizować. Oczywiście nie oznacza to, że można bezkarnie sięgać po algorytm o złożoności <code>O(N^3)</code> gdy dostępny jest <code>O(NlogN)</code>, ale że gdy pojawia się problem z niewystarczającą wydajnością programu, najpierw warto zmierzyć, jak działa i co w nim działa najwolniej, nim zacznie się losowo optymalizować kod.</p>
+<p>Narzędzia wykorzystywane do takich pomiarów to tzw. profile'ry. Ich zastosowanie to złożony problem i nie mieści się w zakresie tego laboratorium. Dlatego wykorzystane będzię najprostsze narzędzie badające czas wykonania programu: instrukcja <code>time</code> dostępna w systemach Linux. Wywołanie <code>time jakakolwiek_instrukcja</code> zmierzy czas wykonania tej instrukcji i wyświetli kilka różnych czasów. &quot;Real&quot; to ten czas, jaki upłynął z punktu widzenia użytkownika, &quot;system&quot; to czas, jaki system operacyjny spędził na obsłudze wywołań systemowych badanej aplikacji, a &quot;user&quot; to ile czasu spędziła sama aplikacja, wykorzystując procesor. Ten ostatni czas jest najciekawszy, gdy bada się złożoność czasową/obliczeniową, bo liczy tylko, ile zajęło samo przetwarzanie.</p>
+<p>Proszę spróbować sprofilować jakąś swoją aplikację. Pierwsza obserwacja może być taka, że aplikacja zakańcza się bardzo szybko. Dlatego, by móc zmierzyć czas jakiejś operacji, trzeba ją często powtórzyć w pętli, bądź na dużym zbiorze danych. Profilowanie krótkich wywołań daje zazwyczaj wyniki niskiej jakości.</p>
+<p>Proszę zaimplementować jakikolwiek prosty algorytm (np. odwrócenie kolejności elementów w wektorze) i zmierzyć czas działania tej operacji, jak skaluje się w zależności od ilości elementów w wektorze i jakie są różnice między konfiguracjami Debug i Release.</p>
+<p>Każde kolejne ćwiczenie będzie wymagało przygotowania krótkiego raportu z pomiarów czasu wykonania zaimplementowanych projektów. Będą też ćwiczenia polegające na porównaniu różnych implementacji.</p>
+<p>Dla zainteresowanych: instrukcję <code>time</code> można wykorzystać, by uzyskać dużo więcej informacji z systemu o działaniu aplikacji. Na przykład ilość danych wysłanych i odebranych z sieci. Proszę sprawdzić <code>man time</code>.</p>
+<p>Dla bardzo zainteresowanych: oprócz złożoności czasowej wciąż bywa znacząca złożoność pamięciowa. Proste badanie &quot;kto alokuje najwięcej pamięci&quot; można wykonać z użyciem <code>valgrind --tool=massif</code>.</p></li>
+</ol>
+</body>
+</html>

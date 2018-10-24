@@ -1,0 +1,39 @@
+<h1 id="aisdi---projekt-z-algorytmów-grafowych">AISDI - projekt z algorytmów grafowych</h1>
+<p><em>Mostem</em> w grafie spójnym nazywamy krawędź, której usunięcie powoduje jego rozspójnienie (powstały w wyniku usunięcia krawędzi graf jest niespójny). Na potrzeby niniejszego zadania, <em>mostem rozległym</em> w grafie spójnym będziemy nazywać taką krawędź, że usunięcię obu jej końców (wierzchołków) powoduje rozspójnienie grafu. Operacja usunięcia wierzchołka oznacza również usunięcie wszystkich krawędzi, których jest końcem.</p>
+<p>Proszę napisać program, który:</p>
+<ol style="list-style-type: decimal">
+<li>Wczyta spójny graf nieskierowany ze standardowego wejścia.</li>
+<li>Znajdzie i wyświetli na ekranie wszystkie mosty rozległe w tym grafie.</li>
+</ol>
+<p>Przyjmujemy, że krawędzie grafu mogą być tylko jednokrotne, a wierzchołki nie mogą być połączone krawędzią same ze sobą. Graf pusty (bez wierzchołków) traktujemy jako spójny.</p>
+<h2 id="przykładowy-sposób-uruchomienia-programu">Przykładowy sposób uruchomienia programu</h2>
+<pre><code>&gt;./program &lt; plik_z_opisem_grafu</code></pre>
+<h2 id="format-opisu-grafu">Format opisu grafu</h2>
+<p>W pierwszej linii znajduje się dodatnia liczba całkowita oznaczająca liczbę wszystkich wierzchołków w grafie. Poniżej, dla każdej krawędzi w grafie, znajduje się linia z dwoma nieujemnymi liczbami całkowitymi, oznaczającymi numery wierzchołków połączonych tą krawędzią. Numeracja wierzchołków zaczyna się od 0. Liczby w jednej linii oddzielone są znakiem spacji. Można założyć poprawność wczytywanego opisu.</p>
+<h2 id="wynik-działania-programu">Wynik działania programu</h2>
+<p>Wynikiem działania programu powinno być wyświetlenie na ekranie wszystkich mostów rozległych. Każdy most rozległy (krawędź) powinien być wyświetlony w postaci odrębnej linii jak w opisie grafu (linia powinna zawierać numery końcowych wierzchołków krawędzi, oddzielone znakiem spacji). W przypadku, gdy w grafie nie ma mostów rozległych, program nie powinien niczego wyświetlać.</p>
+<h2 id="przykład-1">Przykład 1</h2>
+<p>graf.txt:</p>
+<pre><code>3
+0 1
+1 2
+2 0</code></pre>
+<p>wynik:</p>
+<pre><code>&gt;./program &lt; graf.txt
+&gt;</code></pre>
+<h2 id="przykład-2">Przykład 2</h2>
+<p>graf.txt:</p>
+<pre><code>4
+0 1
+1 2
+2 3
+3 0
+0 2</code></pre>
+<p>wynik:</p>
+<pre><code>&gt;./program &lt; graf.txt
+0 2
+&gt;</code></pre>
+<p>lub:</p>
+<pre><code>&gt;./program &lt; graf.txt
+2 0
+&gt;</code></pre>
