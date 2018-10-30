@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <initializer_list>
 #include <stdexcept>
+#define VECTOR_STARTING_SIZE 4
+#define VECTOR_SCALE 2
 
 namespace aisdi
 {
@@ -11,6 +13,7 @@ namespace aisdi
 template <typename Type>
 class Vector
 {
+
 public:
   using difference_type = std::ptrdiff_t;
   using size_type = std::size_t;
@@ -25,8 +28,36 @@ public:
   using iterator = Iterator;
   using const_iterator = ConstIterator;
 
-  Vector()
-  {}
+private:
+  size_type _size;
+  size_type _buffer_size;
+  pointer buffer;
+  void reserce(size_type);
+
+public:
+
+
+
+
+
+  void reserve(size_type multipler = VECTOR_SCALE)
+  {
+      _buffer_size *= multipler;
+      pointer new_buffer = new value_type[_buffer_size];
+      for(int i=0; i<_size; i++)
+        new_buffer[i] = buffer[i];
+
+      delete[] buffer;
+      buffer = new_buffer;
+  }
+
+
+
+  Vector():
+    _size(0), _buffer_size(VECTOR_STARTING_SIZE)
+  {
+    buffer = new value_type[_buffer_size];
+  }
 
   Vector(std::initializer_list<Type> l)
   {
@@ -36,101 +67,159 @@ public:
 
   Vector(const Vector& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+      _size = other._size;
+      _buffer_size = other._buffer_size;
+      buffer = new value_type[_buffer_size];
+      for(int i=0; i< _size; i++)
+        buffer[i] = other.buffer[i];
   }
 
   Vector(Vector&& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+      _size = other._size;
+      _buffer_size = other._buffer_size;
+      buffer = other.buffer;
+      other.buffer = nullptr;
+      other._buffer_size = 0;
+      other._size = 0;
   }
 
   ~Vector()
-  {}
+  {
+      delete[] buffer;
+  }
 
   Vector& operator=(const Vector& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    delete[] buffer;
+    _size = other._size;
+    _buffer_size = other._buffer_size;
+    buffer = new value_type[_buffer_size];
+    for(int i=0; i< _size; i++)
+      buffer[i] = other.buffer[i];
   }
 
   Vector& operator=(Vector&& other)
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+      _size = other._size;
+      _buffer_size = other._buffer_size;
+      delete[] buffer;
+      buffer = other.buffer;
+      other.buffer = nullptr;
+      other._buffer_size = 0;
+      other._size = 0;
   }
 
   bool isEmpty() const
   {
-    throw std::runtime_error("TODO");
+    return _size==0;
   }
 
   size_type getSize() const
   {
-    throw std::runtime_error("TODO");
+    return _size;
   }
 
   void append(const Type& item)
   {
-    (void)item;
-    throw std::runtime_error("TODO");
+    if(_buffer_size == _size) reserve();
+
+    buffer[_size++] = item;
   }
 
   void prepend(const Type& item)
   {
-    (void)item;
-    throw std::runtime_error("TODO");
+    if(_buffer_size == _size) reserve();
+    //when there's some space left, we just move items to next
+    //position and insert prepended item as a first one
+    for(int i=_size; i>0; i--)
+        buffer[i] = buffer[i-1];
+
+    buffer[0] = item;
+    _size++;
   }
 
   void insert(const const_iterator& insertPosition, const Type& item)
   {
-    (void)insertPosition;
-    (void)item;
-    throw std::runtime_error("TODO");
+      if(_buffer_size == _size) reserve();
+      iterator position = Iterator(insertPosition);
+      *position = item;
+      position++;
+      while(position != end()+1)
+        {
+            *(position+1) = *position;
+            position++;
+        }
+    _size++;
   }
 
   Type popFirst()
   {
-    throw std::runtime_error("TODO");
+    if(isEmpty()) throw std::logic_error("EMPTY VECTOR");
+    value_type temp = buffer[0];
+    iterator position = begin();
+    while(position != end())
+    {
+        *position = *(position+1);
+        position++;
+    }
+    _size--;
+    return temp;
   }
 
   Type popLast()
   {
-    throw std::runtime_error("TODO");
+    if(isEmpty()) throw std::logic_error("EMPTY VECTOR");
+    value_type temp = buffer[--_size];
+    return temp;
   }
 
   void erase(const const_iterator& possition)
   {
-    (void)possition;
-    throw std::runtime_error("TODO");
+    iterator position = Iterator(possition);
+    while(position != end())
+    {
+        *position = *(position + 1);
+        position++;
+    }
+
+    _size--;
   }
 
   void erase(const const_iterator& firstIncluded, const const_iterator& lastExcluded)
   {
-    (void)firstIncluded;
-    (void)lastExcluded;
-    throw std::runtime_error("TODO");
+    iterator position = Iterator(firstIncluded);
+    iterator to_erase = Iterator(lastExcluded);
+    while(position != lastExcluded)
+    {
+        if(to_erase != end())
+        {
+            *position = *(to_erase);
+            to_erase++;
+        }
+        position++;
+        _size--;
+    }
   }
 
   iterator begin()
   {
-    throw std::runtime_error("TODO");
+    return Iterator(buffer);
   }
 
   iterator end()
   {
-    throw std::runtime_error("TODO");
+    return Iterator(buffer + _size);
   }
 
   const_iterator cbegin() const
   {
-    throw std::runtime_error("TODO");
+    return ConstIterator(buffer);
   }
 
   const_iterator cend() const
   {
-    throw std::runtime_error("TODO");
+    return ConstIterator(buffer + _size);
   }
 
   const_iterator begin() const
@@ -153,57 +242,63 @@ public:
   using difference_type = typename Vector::difference_type;
   using pointer = typename Vector::const_pointer;
   using reference = typename Vector::const_reference;
+  using size_type = typename Vector::size_type;
 
-  explicit ConstIterator()
+  pointer position;
+
+  explicit ConstIterator(pointer init_position):
+      position(init_position)
   {}
 
   reference operator*() const
   {
-    throw std::runtime_error("TODO");
+    return *position;
   }
 
   ConstIterator& operator++()
   {
-    throw std::runtime_error("TODO");
+    position++;
+    return *this;
   }
 
   ConstIterator operator++(int)
   {
-    throw std::runtime_error("TODO");
+    ConstIterator old = ConstIterator(this->position);
+    position++;
+    return old;
   }
 
   ConstIterator& operator--()
   {
-    throw std::runtime_error("TODO");
+    position--;
+    return *this;
   }
 
   ConstIterator operator--(int)
   {
-    throw std::runtime_error("TODO");
+    ConstIterator old = ConstIterator(this->position);
+    position--;
+    return old;
   }
 
   ConstIterator operator+(difference_type d) const
   {
-    (void)d;
-    throw std::runtime_error("TODO");
+    return ConstIterator(position + d);
   }
 
   ConstIterator operator-(difference_type d) const
   {
-    (void)d;
-    throw std::runtime_error("TODO");
+    return ConstIterator(position - d);
   }
 
   bool operator==(const ConstIterator& other) const
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    return position == other.position;
   }
 
   bool operator!=(const ConstIterator& other) const
   {
-    (void)other;
-    throw std::runtime_error("TODO");
+    return position != other.position;
   }
 };
 
@@ -214,7 +309,8 @@ public:
   using pointer = typename Vector::pointer;
   using reference = typename Vector::reference;
 
-  explicit Iterator()
+  explicit Iterator(pointer position)
+    : ConstIterator(position)
   {}
 
   Iterator(const ConstIterator& other)
