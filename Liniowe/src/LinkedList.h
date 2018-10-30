@@ -82,14 +82,27 @@ public:
   void append(const Type& item)
   {
     if(isEmpty())
+        first = last = new node(item);
+    else
     {
-     }
+        new_node = new node(item, previous = last);
+        last->next = new_node;
+        last = new_node;
+    }
+    _size++;
   }
 
   void prepend(const Type& item)
   {
-    (void)item;
-    throw std::runtime_error("TODO");
+    if(isEmpty())
+        first = last = new node(item);
+    else
+    {
+        new_node = new node(item, next = first);
+        first->previous = new_node;
+        first = new_node;
+    }
+    _size++;
   }
 
   void insert(const const_iterator& insertPosition, const Type& item)
@@ -162,8 +175,8 @@ public:
     pointer next;
     pointer previous;
 
-    node(pointer previous = nullptr, pointer next = nullptr):
-        previous(previous), next(next)
+    node(Type item; pointer previous = nullptr, pointer next = nullptr):
+        item(item), previous(previous), next(next)
         {}
 };
 
