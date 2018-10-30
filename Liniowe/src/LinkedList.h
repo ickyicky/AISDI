@@ -25,7 +25,15 @@ public:
   using iterator = Iterator;
   using const_iterator = ConstIterator;
 
-  LinkedList()
+  class node;
+  node* first;
+  node* last;
+  size_type _size;
+
+  LinkedList():
+      first(nullptr),
+      last(nullptr),
+      _size(0)
   {}
 
   LinkedList(std::initializer_list<Type> l)
@@ -63,18 +71,19 @@ public:
 
   bool isEmpty() const
   {
-    throw std::runtime_error("TODO");
+    return _size == 0;
   }
 
   size_type getSize() const
   {
-    throw std::runtime_error("TODO");
+    return _size;
   }
 
   void append(const Type& item)
   {
-    (void)item;
-    throw std::runtime_error("TODO");
+    if(isEmpty())
+    {
+     }
   }
 
   void prepend(const Type& item)
@@ -142,6 +151,20 @@ public:
   {
     return cend();
   }
+};
+
+template <typename Type>
+class LinkedList<Type>::node
+{
+public:
+    Type item;
+    using pointer = node*;
+    pointer next;
+    pointer previous;
+
+    node(pointer previous = nullptr, pointer next = nullptr):
+        previous(previous), next(next)
+        {}
 };
 
 template <typename Type>
