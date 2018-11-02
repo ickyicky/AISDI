@@ -4,7 +4,8 @@
 #include <cstddef>
 #include <initializer_list>
 #include <stdexcept>
-#define VECTOR_STARTING_SIZE 4
+#include <cmath>
+#define VECTOR_STARTINGvector_size 4
 #define VECTOR_SCALE 2
 
 namespace aisdi
@@ -29,176 +30,177 @@ public:
   using const_iterator = ConstIterator;
 
 private:
-  size_type _size;
-  size_type _buffer_size;
+  size_type vector_size;
+  size_type buffer_size;
   pointer buffer;
-  void reserce(size_type);
-
-public:
-
-
-
-
 
   void reserve(size_type multipler = VECTOR_SCALE)
   {
-      _buffer_size *= multipler;
-      pointer new_buffer = new value_type[_buffer_size];
-      for(int i=0; i<_size; i++)
+      buffer_size *= multipler;
+      pointer new_buffer = new value_type[buffer_size];
+      for(size_type i=0; i<vector_size; i++)
         new_buffer[i] = buffer[i];
 
       delete[] buffer;
       buffer = new_buffer;
   }
 
-
-
+public:
   Vector():
-    _size(0), _buffer_size(VECTOR_STARTING_SIZE)
+    vector_size(0), buffer_size(VECTOR_STARTINGvector_size)
   {
-    buffer = new value_type[_buffer_size];
+    buffer = new value_type[buffer_size];
   }
 
   Vector(std::initializer_list<Type> l)
   {
-    (void)l; // disables "unused argument" warning, can be removed when method is implemented.
-    throw std::runtime_error("TODO");
+    vector_size = l.size();
+    buffer_size = vector_size;
+    buffer = new value_type[ buffer_size ];
+    auto to_be_copied = l.begin();
+    for( size_type i = 0; i < vector_size; i++ )
+      buffer[i] = *(to_be_copied++);
   }
 
   Vector(const Vector& other)
   {
-      _size = other._size;
-      _buffer_size = other._buffer_size;
-      buffer = new value_type[_buffer_size];
-      for(int i=0; i< _size; i++)
+      vector_size = other.vector_size;
+      buffer_size = other.buffer_size;
+      buffer = new value_type[buffer_size];
+      for(size_type i=0; i< vector_size; i++)
         buffer[i] = other.buffer[i];
   }
 
   Vector(Vector&& other)
   {
-      _size = other._size;
-      _buffer_size = other._buffer_size;
+      vector_size = other.vector_size;
+      buffer_size = other.buffer_size;
       buffer = other.buffer;
       other.buffer = nullptr;
-      other._buffer_size = 0;
-      other._size = 0;
+      other.buffer_size = 0;
+      other.vector_size = 0;
   }
 
   ~Vector()
   {
-      delete[] buffer;
+    delete[] buffer;
   }
 
   Vector& operator=(const Vector& other)
   {
+    if(this == &other)
+      return *this;
     delete[] buffer;
-    _size = other._size;
-    _buffer_size = other._buffer_size;
-    buffer = new value_type[_buffer_size];
-    for(int i=0; i< _size; i++)
-      buffer[i] = other.buffer[i];
+    vector_size = other.vector_size;
+    buffer_size = other.buffer_size;
+    buffer = new value_type[buffer_size];
+    for(size_type i=0; i< vector_size; i++)
+        buffer[i] = other.buffer[i];
+    return *this;
   }
 
   Vector& operator=(Vector&& other)
   {
-      _size = other._size;
-      _buffer_size = other._buffer_size;
-      delete[] buffer;
-      buffer = other.buffer;
-      other.buffer = nullptr;
-      other._buffer_size = 0;
-      other._size = 0;
+    if(this == &other)
+      return *this;
+    vector_size = other.vector_size;
+    buffer_size = other.buffer_size;
+    delete[] buffer;
+    buffer = other.buffer;
+    other.buffer = nullptr;
+    other.buffer_size = 0;
+    other.vector_size = 0;
+    return *this;
   }
 
   bool isEmpty() const
   {
-    return _size==0;
+    return vector_size==0;
   }
 
   size_type getSize() const
   {
-    return _size;
+    return vector_size;
   }
 
   void append(const Type& item)
   {
-    if(_buffer_size == _size) reserve();
+    if(buffer_size == vector_size) reserve();
 
-    buffer[_size++] = item;
+    buffer[vector_size++] = item;
   }
 
   void prepend(const Type& item)
   {
-    if(_buffer_size == _size) reserve();
+    if(buffer_size == vector_size) reserve();
     //when there's some space left, we just move items to next
     //position and insert prepended item as a first one
-    for(int i=_size; i>0; i--)
+    for(size_type i = vector_size; i > 0; i--)
         buffer[i] = buffer[i-1];
 
     buffer[0] = item;
-    _size++;
+    vector_size++;
   }
 
   void insert(const const_iterator& insertPosition, const Type& item)
   {
-      if(_buffer_size == _size) reserve();
+      if(buffer_size == vector_size) reserve();
       iterator position = Iterator(insertPosition);
-      *position = item;
-      position++;
-      while(position != end()+1)
+      *position++ = item;
+      while(position != end())
         {
             *(position+1) = *position;
             position++;
         }
-    _size++;
+    vector_size++;
   }
 
   Type popFirst()
   {
     if(isEmpty()) throw std::logic_error("EMPTY VECTOR");
     value_type temp = buffer[0];
-    iterator position = begin();
-    while(position != end())
-    {
-        *position = *(position+1);
-        position++;
-    }
-    _size--;
+    for(size_type i = 1; i < vector_size; i++)
+      buffer[i-1] = buffer[i];
+    buffer[--vector_size].~Type();
     return temp;
   }
 
   Type popLast()
   {
     if(isEmpty()) throw std::logic_error("EMPTY VECTOR");
-    value_type temp = buffer[--_size];
+    value_type temp = buffer[--vector_size];
+    buffer[vector_size].~Type();
     return temp;
   }
 
   void erase(const const_iterator& possition)
   {
     iterator position = Iterator(possition);
-    while(position != end())
+    while(position != end()-1)
     {
         *position = *(position + 1);
         position++;
     }
+    (*position).~Type();
 
-    _size--;
+    vector_size--;
   }
 
   void erase(const const_iterator& firstIncluded, const const_iterator& lastExcluded)
   {
     iterator position = Iterator(firstIncluded);
     iterator to_erase = Iterator(lastExcluded);
+    iterator ending_element = end();
     while(position != lastExcluded)
     {
-        if(to_erase != end())
+        (*position).~Type();
+        if(to_erase != ending_element)
         {
             *position = *(to_erase);
             to_erase++;
         }
         position++;
-        _size--;
+        vector_size--;
     }
   }
 
@@ -209,7 +211,7 @@ public:
 
   iterator end()
   {
-    return Iterator(buffer + _size);
+    return Iterator(buffer + vector_size);
   }
 
   const_iterator cbegin() const
@@ -219,7 +221,7 @@ public:
 
   const_iterator cend() const
   {
-    return ConstIterator(buffer + _size);
+    return ConstIterator(buffer + vector_size);
   }
 
   const_iterator begin() const
@@ -244,9 +246,11 @@ public:
   using reference = typename Vector::const_reference;
   using size_type = typename Vector::size_type;
 
+private:
   pointer position;
 
-  explicit ConstIterator(pointer init_position):
+public:
+  explicit ConstIterator(pointer init_position = nullptr):
       position(init_position)
   {}
 
@@ -263,7 +267,7 @@ public:
 
   ConstIterator operator++(int)
   {
-    ConstIterator old = ConstIterator(this->position);
+    ConstIterator old = ConstIterator(position);
     position++;
     return old;
   }
@@ -276,7 +280,7 @@ public:
 
   ConstIterator operator--(int)
   {
-    ConstIterator old = ConstIterator(this->position);
+    ConstIterator old = ConstIterator(position);
     position--;
     return old;
   }
