@@ -29,11 +29,11 @@ private:
   class Node;
   Node* first;
   Node* last;
-  size_type _size;
+  size_type list_size;
 
   void init()
   {
-    _size = 0;
+    list_size = 0;
     first = last = new Node();
   }
 
@@ -61,17 +61,17 @@ public:
 
   LinkedList(LinkedList&& other)
   {
-    _size = other._size;
+    list_size = other.list_size;
     first = other.first;
     last = other.last;
-    other._size = 0;
+    other.list_size = 0;
     other.first = nullptr;
     other.last = nullptr;
   }
 
   ~LinkedList()
   {
-    while(last != nullptr)
+    while(first != nullptr)
       {
         Node* temp = first;
         first = first->next;
@@ -81,13 +81,15 @@ public:
 
   LinkedList& operator=(const LinkedList& other)
   {
-    while(first != last)
+    if(this == &other)
+      return *this;
+    while(first != nullptr)
       {
         Node* temp = first;
         first = first->next;
         delete temp;
       }
-    _size = 0;
+    list_size = 0;
     auto position = other.begin();
     while( position != other.end() )
       append( *position++ );
@@ -96,13 +98,15 @@ public:
 
   LinkedList& operator=(LinkedList&& other)
   {
+    if(this == &other)
+      return *this;
     while(first != nullptr)
       {
         Node* temp = first;
         first = first->next;
         delete temp;
       }
-    _size = other._size;
+    list_size = other.list_size;
     first = other.first;
     last = other.last;
     return *this;
@@ -110,19 +114,19 @@ public:
 
   bool isEmpty() const
   {
-    return _size == 0;
+    return list_size == 0;
   }
 
   size_type getSize() const
   {
-    return _size;
+    return list_size;
   }
 
   void append(const Type& item)
   {
     Node* new_node = new Node(item);
 
-    if(_size == 0)
+    if(list_size == 0)
       first = new_node;
     else
     {
@@ -132,20 +136,20 @@ public:
 
     last->previous = new_node;
     new_node->next = last;
-    _size++;
+    list_size++;
   }
 
   void prepend(const Type& item)
   {
     Node* new_node = new Node(item, nullptr, first);
 
-    if(_size == 0)
+    if(list_size == 0)
       last->previous = new_node;
     else
       first->next->previous = new_node;
 
     first = new_node;
-    _size++;
+    list_size++;
   }
 
   void insert(const const_iterator& insertPosition, const Type& item)
@@ -156,34 +160,34 @@ public:
     else
       insertPosition.pointed->previous->next = new_node;
     insertPosition.pointed->previous = new_node;
-    _size++;
+    list_size++;
   }
 
   Type popFirst()
   {
-    if( _size == 0 ) throw std::logic_error("EMPTY LINKED LIST");
+    if( list_size == 0 ) throw std::logic_error("EMPTY LINKED LIST");
 
     value_type value = first->item;
     Node* node_to_delete = first;
-    if(_size == 1)
+    if(list_size == 1)
       first = last;
     else
       first = first->next;
 
     first->previous = nullptr;
     delete node_to_delete;
-    _size--;
+    list_size--;
     return value;
   }
 
   Type popLast()
   {
-    if( _size == 0 ) throw std::logic_error("EMPTY LINKED LIST");
+    if( list_size == 0 ) throw std::logic_error("EMPTY LINKED LIST");
 
     value_type value = last->previous->item;
     Node* node_to_delete = last->previous;
 
-    if(_size == 1)
+    if(list_size == 1)
     {
       first = last;
       last->previous = nullptr;
@@ -194,7 +198,7 @@ public:
       last->previous->previous->next = last;
     }
     delete node_to_delete;
-    _size--;
+    list_size--;
     return value;
   }
 
@@ -209,7 +213,7 @@ public:
 
     possition.pointed->next->previous = possition.pointed->previous;
     delete node_to_delete;
-    _size--;
+    list_size--;
   }
 
   void erase(const const_iterator& firstIncluded, const const_iterator& lastExcluded)
@@ -230,7 +234,7 @@ public:
 
     firstIncluded.pointed->next->previous = firstIncluded.pointed->previous;
     delete node_to_delete;
-    _size--;
+    list_size--;
   }
 
   iterator begin()
@@ -268,16 +272,20 @@ template <typename Type>
 class LinkedList<Type>::Node
 {
 public:
-    using pointer = Node*;
+    using npointer = Node*;
     Type item;
-    pointer previous;
-    pointer next;
+    npointer previous;
+    npointer next;
 
-    Node(pointer previous = nullptr, pointer next = nullptr):
+    Node(npointer previous = nullptr, npointer next = nullptr):
         previous(previous), next(next)
         {}
-    Node(const Type& item, pointer previous = nullptr, pointer next = nullptr):
+
+    Node(const Type& item, npointer previous = nullptr, npointer next = nullptr):
         item(item), previous(previous), next(next)
+        {}
+
+    ~Node()
         {}
 };
 
@@ -300,17 +308,20 @@ public:
 
   reference operator*() const
   {
+    if(pointed->next == nullptr) throw std::out_of_range("OUT OF RANGE");
     return pointed->item;
   }
 
   ConstIterator& operator++()
   {
+    if(pointed->next == nullptr) throw std::out_of_range("OUT OF RANGE");
     pointed = pointed->next;
     return *this;
   }
 
   ConstIterator operator++(int)
   {
+    if(pointed->next == nullptr) throw std::out_of_range("OUT OF RANGE");
     ConstIterator old = ConstIterator(pointed);
     pointed = pointed->next;
     return old;
@@ -319,12 +330,14 @@ public:
 
   ConstIterator& operator--()
   {
+    if(pointed->previous == nullptr) throw std::out_of_range("OUT OF RANGE");
     pointed = pointed->previous;
     return *this;
   }
 
   ConstIterator operator--(int)
   {
+    if(pointed->previous == nullptr) throw std::out_of_range("OUT OF RANGE");
     ConstIterator old = ConstIterator(pointed);
     pointed = pointed->previous;
     return old;
@@ -336,6 +349,7 @@ public:
     while(d > 0)
     {
       temp_position = temp_position->next;
+      if(temp_position == nullptr) throw std::out_of_range("OUT OF RANGE");
       d--;
     }
     return ConstIterator(temp_position);
@@ -347,6 +361,7 @@ public:
     while(d > 0)
     {
       temp_position = temp_position->previous;
+      if(temp_position == nullptr) throw std::out_of_range("OUT OF RANGE");
       d--;
     }
     return ConstIterator(temp_position);
