@@ -48,7 +48,7 @@ public:
     init();
     auto position = l.begin();
     while( position != l.end() )
-      append( *position++ );
+      append( *(position++) );
   }
 
   LinkedList(const LinkedList& other)
@@ -56,7 +56,7 @@ public:
     init();
     auto position = other.begin();
     while( position != other.end() )
-      append( *position++ );
+      append( *(position++) );
   }
 
   LinkedList(LinkedList&& other)
@@ -83,7 +83,7 @@ public:
   {
     if(this == &other)
       return *this;
-    while(first != nullptr)
+    while(first != last && first != nullptr)
       {
         Node* temp = first;
         first = first->next;
@@ -92,7 +92,7 @@ public:
     list_size = 0;
     auto position = other.begin();
     while( position != other.end() )
-      append( *position++ );
+      append( *(position++) );
     return *this;
   }
 
@@ -184,8 +184,9 @@ public:
   {
     if( list_size == 0 ) throw std::logic_error("EMPTY LINKED LIST");
 
-    value_type value = last->previous->item;
-    Node* node_to_delete = last->previous;
+    Node* last_node = last->previous;
+
+    value_type value = last_node->item;
 
     if(list_size == 1)
     {
@@ -195,15 +196,17 @@ public:
     else
     {
       last->previous = last->previous->previous;
-      last->previous->previous->next = last;
+      last->previous->next = last;
     }
-    delete node_to_delete;
+    delete last_node;
     list_size--;
     return value;
   }
 
   void erase(const const_iterator& possition)
   {
+    if(list_size == 0 || possition.pointed == last) throw std::out_of_range("OUT OF RANGE");
+
     Node* node_to_delete = possition.pointed;
 
     if( possition.pointed == first )
@@ -218,6 +221,8 @@ public:
 
   void erase(const const_iterator& firstIncluded, const const_iterator& lastExcluded)
   {
+    if(list_size == 0 || firstIncluded.pointed == last) throw std::out_of_range("OUT OF RANGE");
+
     Node* node_to_delete = firstIncluded.pointed;
 
     if( firstIncluded.pointed == first )
@@ -230,11 +235,10 @@ public:
         Node* temp = node_to_delete;
         node_to_delete = node_to_delete->next;
         delete temp;
+        list_size--;
       }
 
     firstIncluded.pointed->next->previous = firstIncluded.pointed->previous;
-    delete node_to_delete;
-    list_size--;
   }
 
   iterator begin()

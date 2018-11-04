@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <initializer_list>
 #include <stdexcept>
+#include <iostream>
 #include <cmath>
 #define VECTOR_STARTINGvector_size 4
 #define VECTOR_SCALE 2
@@ -144,15 +145,31 @@ public:
 
   void insert(const const_iterator& insertPosition, const Type& item)
   {
+
+    if(insertPosition == end())
+    {
+      append(item);
+    }
+    else if(insertPosition == begin())
+    {
+      prepend(item);
+    }
+    else
+    {
       if(buffer_size == vector_size) reserve();
       iterator position = Iterator(insertPosition);
-      *position++ = item;
-      while(position != end())
-        {
-            *(position+1) = *position;
-            position++;
-        }
-    vector_size++;
+      auto current = end();
+      vector_size++;
+      position = Iterator(insertPosition);
+
+      while(current != position)
+         {
+             *current = *(current-1);
+             current--;
+         }
+
+      buffer[insertPosition.getIndex()] = item;
+    }
   }
 
   Type popFirst()
@@ -161,7 +178,7 @@ public:
     value_type temp = buffer[0];
     for(size_type i = 1; i < vector_size; i++)
       buffer[i-1] = buffer[i];
-    buffer[--vector_size].~Type();
+    vector_size--;
     return temp;
   }
 
@@ -169,59 +186,65 @@ public:
   {
     if(isEmpty()) throw std::logic_error("EMPTY VECTOR");
     value_type temp = buffer[--vector_size];
-    buffer[vector_size].~Type();
     return temp;
   }
 
   void erase(const const_iterator& possition)
   {
-    iterator position = Iterator(possition);
-    while(position != end()-1)
+    auto current = Iterator(possition);
+    while(current != end() - 1)
     {
-        *position = *(position + 1);
-        position++;
+      *current = *(current+1);
+      current ++;
     }
-    (*position).~Type();
 
     vector_size--;
   }
 
   void erase(const const_iterator& firstIncluded, const const_iterator& lastExcluded)
   {
-    iterator position = Iterator(firstIncluded);
-    iterator to_erase = Iterator(lastExcluded);
-    iterator ending_element = end();
-    while(position != lastExcluded)
+    if( firstIncluded == begin() && lastExcluded == end() )
+      vector_size = 0;
+    else if ( firstIncluded == lastExcluded )
+    {}
+    else
     {
-        (*position).~Type();
-        if(to_erase != ending_element)
-        {
-            *position = *(to_erase);
-            to_erase++;
-        }
-        position++;
-        vector_size--;
+      //moving items
+      iterator where_to_copy = Iterator(lastExcluded);
+      iterator where_to_paste = Iterator(firstIncluded);
+
+      while(where_to_copy != end())
+        *(where_to_paste++) = *(where_to_copy++);
+
+      where_to_paste = Iterator(firstIncluded);
+      size_type removed = 0;
+      while(where_to_paste != lastExcluded)
+      {
+        removed++;
+        where_to_paste++;
+      }
+      vector_size-=removed;
     }
   }
 
   iterator begin()
   {
-    return Iterator(buffer);
+    return Iterator(buffer,0,&vector_size);
   }
 
   iterator end()
   {
-    return Iterator(buffer + vector_size);
+    return Iterator(buffer + vector_size,vector_size,&vector_size);
   }
 
   const_iterator cbegin() const
   {
-    return ConstIterator(buffer);
+    return ConstIterator(buffer,0,&vector_size);
   }
 
   const_iterator cend() const
   {
-    return ConstIterator(buffer + vector_size);
+    return ConstIterator(buffer + vector_size,vector_size,&vector_size);
   }
 
   const_iterator begin() const
@@ -248,61 +271,81 @@ public:
 
 private:
   pointer position;
+  size_type index;
+  const size_type* max_index;
+
+
 
 public:
-  explicit ConstIterator(pointer init_position = nullptr):
-      position(init_position)
+  explicit ConstIterator(pointer init_position = nullptr, size_type index = 0, const size_type* maxindex = nullptr):
+      position(init_position), index(index), max_index(maxindex)
   {}
+
+  size_type getIndex() const
+  {
+    return index;
+  }
 
   reference operator*() const
   {
+    if(index>=*max_index) throw std::out_of_range("OUT OF RANGE");
     return *position;
   }
 
   ConstIterator& operator++()
   {
+    if(index==*max_index) throw std::out_of_range("OUT OF RANGE");
     position++;
+    index++;
     return *this;
   }
 
   ConstIterator operator++(int)
   {
-    ConstIterator old = ConstIterator(position);
+    if(index==*max_index) throw std::out_of_range("OUT OF RANGE");
+    ConstIterator old = ConstIterator(position,index,max_index);
+    index++;
     position++;
     return old;
   }
 
   ConstIterator& operator--()
   {
+    if(index==0) throw std::out_of_range("OUT OF RANGE");
+    index--;
     position--;
     return *this;
   }
 
   ConstIterator operator--(int)
   {
-    ConstIterator old = ConstIterator(position);
+    if(index==0) throw std::out_of_range("OUT OF RANGE");
+    ConstIterator old = ConstIterator(position,index,max_index);
+    index--;
     position--;
     return old;
   }
 
   ConstIterator operator+(difference_type d) const
   {
-    return ConstIterator(position + d);
+    if(index + d > *max_index) throw std::out_of_range("OUT OF RANGE");
+    return ConstIterator(position + d,index + d, max_index);
   }
 
   ConstIterator operator-(difference_type d) const
   {
-    return ConstIterator(position - d);
+    if(index - d < 0) throw std::out_of_range("OUT OF RANGE");
+    return ConstIterator(position - d,index - d, max_index);
   }
 
   bool operator==(const ConstIterator& other) const
   {
-    return position == other.position;
+    return index == other.index;
   }
 
   bool operator!=(const ConstIterator& other) const
   {
-    return position != other.position;
+    return index != other.index;
   }
 };
 
@@ -313,13 +356,18 @@ public:
   using pointer = typename Vector::pointer;
   using reference = typename Vector::reference;
 
-  explicit Iterator(pointer position)
-    : ConstIterator(position)
+  explicit Iterator(pointer init_position = nullptr, size_type index = 0, const size_type* maxindex = nullptr)
+    : ConstIterator(init_position,index,maxindex)
   {}
 
   Iterator(const ConstIterator& other)
     : ConstIterator(other)
   {}
+
+  size_type getIndex()
+  {
+    return ConstIterator::getIndex();
+  }
 
   Iterator& operator++()
   {
