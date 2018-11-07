@@ -34,7 +34,9 @@ private:
   void init()
   {
     list_size = 0;
-    first = last = new Node();
+    first = new Node();
+    last = new Node(first,nullptr);
+    first->next = last;
   }
 
 public:
@@ -77,22 +79,28 @@ public:
         first = first->next;
         delete temp;
       }
+      first = last = nullptr;
+      list_size = 0;
   }
 
   LinkedList& operator=(const LinkedList& other)
   {
     if(this == &other)
       return *this;
-    while(first != last && first != nullptr)
-      {
-        Node* temp = first;
-        first = first->next;
-        delete temp;
-      }
+    Node* position = first->next;
+    while(position != last)
+    {
+      Node* temp = position;
+      position = position->next;
+      delete temp;
+    }
+    last->previous = first;
+    first->next = last;
+
     list_size = 0;
-    auto position = other.begin();
-    while( position != other.end() )
-      append( *(position++) );
+    auto other_position = other.begin();
+    while( other_position != other.end() )
+      append( *(other_position++) );
     return *this;
   }
 
@@ -100,15 +108,20 @@ public:
   {
     if(this == &other)
       return *this;
-    while(first != nullptr)
-      {
-        Node* temp = first;
-        first = first->next;
-        delete temp;
-      }
+
+    Node* position = first->next;
+    while(position != last)
+    {
+      Node* temp = position;
+      position = position->next;
+      delete temp;
+    }
+
     list_size = other.list_size;
     first = other.first;
     last = other.last;
+    other.list_size = 0;
+    other.first = other.last = nullptr;
     return *this;
   }
 
@@ -124,42 +137,29 @@ public:
 
   void append(const Type& item)
   {
-    Node* new_node = new Node(item);
-
-    if(list_size == 0)
-      first = new_node;
-    else
-    {
-      last->previous->next = new_node;
-      new_node->previous = last->previous;
-    }
-
+    Node* new_node = new Node(item,last->previous,last);
+    last->previous->next = new_node;
     last->previous = new_node;
-    new_node->next = last;
+
     list_size++;
   }
 
   void prepend(const Type& item)
   {
-    Node* new_node = new Node(item, nullptr, first);
+    Node* new_node = new Node(item, first, first->next);
+    first->next->previous = new_node;
+    first->next = new_node;
 
-    if(list_size == 0)
-      last->previous = new_node;
-    else
-      first->next->previous = new_node;
-
-    first = new_node;
     list_size++;
   }
 
   void insert(const const_iterator& insertPosition, const Type& item)
   {
     Node* new_node = new Node(item, insertPosition.pointed->previous, insertPosition.pointed);
-    if(insertPosition.pointed->previous == nullptr)
-      first = new_node;
-    else
-      insertPosition.pointed->previous->next = new_node;
-    insertPosition.pointed->previous = new_node;
+    Iterator new_iterator = insertPosition;
+    new_iterator.pointed->previous->next = new_node;
+    new_iterator.pointed->previous = new_node;
+
     list_size++;
   }
 
@@ -167,15 +167,12 @@ public:
   {
     if( list_size == 0 ) throw std::logic_error("EMPTY LINKED LIST");
 
-    value_type value = first->item;
-    Node* node_to_delete = first;
-    if(list_size == 1)
-      first = last;
-    else
-      first = first->next;
+    value_type value = first->next->item;
+    Node* to_delete = first->next;
+    first->next = to_delete->next;
+    to_delete->next->previous = first;
+    delete to_delete;
 
-    first->previous = nullptr;
-    delete node_to_delete;
     list_size--;
     return value;
   }
@@ -184,66 +181,54 @@ public:
   {
     if( list_size == 0 ) throw std::logic_error("EMPTY LINKED LIST");
 
-    Node* last_node = last->previous;
+    value_type value = last->previous->item;
+    Node* to_delete = last->previous;
+    last->previous = to_delete->previous;
+    to_delete->previous->next = last;
+    delete to_delete;
 
-    value_type value = last_node->item;
-
-    if(list_size == 1)
-    {
-      first = last;
-      last->previous = nullptr;
-    }
-    else
-    {
-      last->previous = last->previous->previous;
-      last->previous->next = last;
-    }
-    delete last_node;
     list_size--;
     return value;
   }
 
   void erase(const const_iterator& possition)
   {
-    if(list_size == 0 || possition.pointed == last) throw std::out_of_range("OUT OF RANGE");
+    if(list_size == 0 || possition.pointed == last
+                      || possition.pointed == first)
+                          throw std::out_of_range("OUT OF RANGE");
 
-    Node* node_to_delete = possition.pointed;
+    Node* to_delete = possition.pointed;
+    to_delete->previous->next = to_delete->next;
+    to_delete->next->previous = to_delete->previous;
+    delete to_delete;
 
-    if( possition.pointed == first )
-        first = first->next;
-    else
-      possition.pointed->previous->next = possition.pointed->next;
-
-    possition.pointed->next->previous = possition.pointed->previous;
-    delete node_to_delete;
     list_size--;
   }
 
   void erase(const const_iterator& firstIncluded, const const_iterator& lastExcluded)
   {
-    if(list_size == 0 || firstIncluded.pointed == last) throw std::out_of_range("OUT OF RANGE");
+    if(list_size == 0 || firstIncluded.pointed == last
+                      || firstIncluded.pointed == first
+                      || lastExcluded.pointed == first)
+                          throw std::out_of_range("OUT OF RANGE");
+    if(firstIncluded == lastExcluded) return;
 
-    Node* node_to_delete = firstIncluded.pointed;
+    firstIncluded.pointed->previous->next = lastExcluded.pointed;
+    lastExcluded.pointed->previous = firstIncluded.pointed->previous;
 
-    if( firstIncluded.pointed == first )
-        first = lastExcluded.pointed;
-    else
-      firstIncluded.pointed->previous->next = lastExcluded.pointed;
-
-    while(node_to_delete != lastExcluded.pointed)
-      {
-        Node* temp = node_to_delete;
-        node_to_delete = node_to_delete->next;
-        delete temp;
-        list_size--;
-      }
-
-    firstIncluded.pointed->next->previous = firstIncluded.pointed->previous;
+    Node* to_delete = firstIncluded.pointed;
+    while(to_delete != lastExcluded.pointed && to_delete != last && to_delete!=nullptr)
+    {
+      Node* temp = to_delete;
+      to_delete = to_delete->next;
+      delete temp;
+      list_size--;
+    }
   }
 
   iterator begin()
   {
-    return Iterator(first);
+    return Iterator(first->next);
   }
 
   iterator end()
@@ -253,7 +238,7 @@ public:
 
   const_iterator cbegin() const
   {
-    return ConstIterator(first);
+    return ConstIterator(first->next);
   }
 
   const_iterator cend() const
@@ -276,7 +261,7 @@ template <typename Type>
 class LinkedList<Type>::Node
 {
 public:
-    using npointer = Node*;
+    using npointer = Node*; //n pointer stands for node pointer
     Type item;
     npointer previous;
     npointer next;
@@ -297,8 +282,9 @@ template <typename Type>
 class LinkedList<Type>::ConstIterator
 {
 private:
-  Node* pointed;
+
 public:
+  Node* pointed;
   friend class LinkedList<Type>;
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = typename LinkedList::value_type;
@@ -312,20 +298,31 @@ public:
 
   reference operator*() const
   {
-    if(pointed->next == nullptr) throw std::out_of_range("OUT OF RANGE");
-    return pointed->item;
+    if(pointed == nullptr || pointed->next == nullptr || pointed->previous == nullptr)
+    {
+        throw std::out_of_range("OUT OF RANGE");
+    }
+    else
+    {
+        return pointed->item;
+    }
   }
 
   ConstIterator& operator++()
   {
-    if(pointed->next == nullptr) throw std::out_of_range("OUT OF RANGE");
+    if(pointed == nullptr || pointed->next == nullptr)
+        throw std::out_of_range("OUT OF RANGE");
+
     pointed = pointed->next;
     return *this;
+
   }
 
   ConstIterator operator++(int)
   {
-    if(pointed->next == nullptr) throw std::out_of_range("OUT OF RANGE");
+    if(pointed == nullptr || pointed->next == nullptr)
+        throw std::out_of_range("OUT OF RANGE");
+
     ConstIterator old = ConstIterator(pointed);
     pointed = pointed->next;
     return old;
@@ -334,14 +331,18 @@ public:
 
   ConstIterator& operator--()
   {
-    if(pointed->previous == nullptr) throw std::out_of_range("OUT OF RANGE");
+    if(pointed->previous->previous == nullptr)
+        throw std::out_of_range("OUT OF RANGE");
+
     pointed = pointed->previous;
     return *this;
   }
 
   ConstIterator operator--(int)
   {
-    if(pointed->previous == nullptr) throw std::out_of_range("OUT OF RANGE");
+    if(pointed->previous->previous == nullptr)
+        throw std::out_of_range("OUT OF RANGE");
+
     ConstIterator old = ConstIterator(pointed);
     pointed = pointed->previous;
     return old;
@@ -352,8 +353,9 @@ public:
     Node* temp_position = pointed;
     while(d > 0)
     {
+      if(temp_position->next == nullptr)
+          throw std::out_of_range("OUT OF RANGE");
       temp_position = temp_position->next;
-      if(temp_position == nullptr) throw std::out_of_range("OUT OF RANGE");
       d--;
     }
     return ConstIterator(temp_position);
@@ -364,8 +366,9 @@ public:
     Node* temp_position = pointed;
     while(d > 0)
     {
+      if(temp_position->previous->previous == nullptr)
+          throw std::out_of_range("OUT OF RANGE");
       temp_position = temp_position->previous;
-      if(temp_position == nullptr) throw std::out_of_range("OUT OF RANGE");
       d--;
     }
     return ConstIterator(temp_position);
@@ -373,6 +376,7 @@ public:
 
   bool operator==(const ConstIterator& other) const
   {
+
     return pointed == other.pointed;
   }
 
