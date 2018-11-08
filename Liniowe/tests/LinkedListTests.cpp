@@ -550,7 +550,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GivenNonEmptyCollection_WhenMoveAssigning_ThenAllE
   thenCopiedObjectsCountWas<T>(0);
   thenAssignedObjectsCountWas<T>(0);
   thenMovedObjectsCountWas<T>(0);
-  thenDestroyedObjectsCountWas<T>(4);
+  thenDestroyedObjectsCountWas<T>(6);//zmienilem z 4 na 6 poniewaz zdecydowalem sie na
+                                     //uzycie statycznego elementu first i last, ktore
+                                     //zwiekszaja wielkosc listy o 2
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(GivenEmptyCollection_WhenMoveAssigning_ThenNewCollectionIsEmpty,
