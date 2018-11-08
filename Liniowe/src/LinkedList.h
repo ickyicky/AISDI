@@ -80,7 +80,7 @@ public:
         delete temp;
       }
       first = last = nullptr;
-      list_size = 0;
+      //list_size = 0;
   }
 
   LinkedList& operator=(const LinkedList& other)
@@ -109,8 +109,8 @@ public:
     if(this == &other)
       return *this;
 
-    Node* position = first->next;
-    while(position != last)
+    Node* position = first;
+    while(position != nullptr)
     {
       Node* temp = position;
       position = position->next;
