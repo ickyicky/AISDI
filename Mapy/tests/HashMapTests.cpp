@@ -791,3 +791,18 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GivenTwoMapsWithDifferentKeys_WhenComparingThem_Th
 // If Iterator methods are to be changed, then new ConstIterator tests are required.
 
 BOOST_AUTO_TEST_SUITE_END()
+
+
+namespace std
+{
+    template<> struct hash<OperationCountingObject>
+    {
+        typedef OperationCountingObject argument_type;
+        typedef size_t result_type;
+        result_type operator()(argument_type const& s) const noexcept
+        {
+            result_type const h1 ( std::hash<int>{}(s) );
+            return h1;
+        }
+    };
+}
