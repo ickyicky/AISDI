@@ -64,6 +64,8 @@ private:
           current = new node(v,nullptr,nullptr,backup);
           backup->left = current;
           size++;
+          balance(backup);
+          if(backup != root) balance(root);
           break;
         }
       }
@@ -74,6 +76,8 @@ private:
         {
           current = new node(v,nullptr,nullptr,backup);
           backup->right = current;
+          balance(backup);
+          if(backup != root) balance(root);
           size++;
           break;
         }
@@ -104,10 +108,48 @@ private:
     return current;
   }
 
-  void balance(node* x)
+  size_t deph(node* x)
   {
-    (void) x;
+    if(x == nullptr) return 0;
+    size_t left = deph(x->left);
+    size_t right = deph(x->right);
+    size_t max = left>right? left: right;
+    return 1 + max;
   }
+
+  void balance(node* x)
+    {
+      if(x == nullptr) return;
+      size_t dright = deph(x->right);
+      size_t dleft = deph(x->left);
+      auto left = x->left;
+      auto right = x->right;
+
+      if( dleft > dright + 1 )
+      {
+        if( x->parent != nullptr)
+          x->parent = left;
+        else root = left;
+        left->parent = x->parent;
+
+        x->left = left->right;
+        if(left->right != nullptr) left->right->parent = x;
+        x->parent = left;
+        left->right = x;
+      }
+      else if( dright > dleft + 1 )
+      {
+        if( x->parent != nullptr)
+          x->parent = right;
+        else root = right;
+        right->parent = x->parent;
+
+        x->right = right->left;
+        if(right->left != nullptr) right->left->parent = x;
+        x->parent = right;
+        right->left = x;
+      }
+    }
 
   node* minimum(node* x) const
   {
@@ -165,8 +207,14 @@ public:
     other.size = 0;
   }
 
+  ~TreeMap()
+  {
+    clear();
+  }
+
   TreeMap& operator=(const TreeMap& other)
   {
+    if(&other == this) return *this;
     clear();
     for(auto i = other.begin(); i != other.end(); i++)
       ffind(*i);
@@ -175,10 +223,13 @@ public:
 
   TreeMap& operator=(TreeMap&& other)
   {
-    clear();
-    root = other.root;
+    if(&other != this)
+    {
+        clear();
+        root = other.root;
+        size = other.size;
+    }
     other.root = nullptr;
-    size = other.size;
     other.size = 0;
     return *this;
   }
@@ -196,7 +247,10 @@ public:
 
   const mapped_type& valueOf(const key_type& key) const
   {
-    return valueOf(key);
+    auto found = ofind(key);
+    if(found == nullptr)
+      throw std::out_of_range("out_of_range");
+    return found->data.second;
   }
 
   mapped_type& valueOf(const key_type& key)
@@ -219,7 +273,8 @@ public:
 
   void remove(const key_type& key)
   {
-    node* to_delete = ffind(key);
+    node* to_delete = ofind(key);
+    if(to_delete == nullptr) throw std::out_of_range("out_of_range");
     node* right = to_delete->right;
     node* left = to_delete->left;
 
@@ -243,10 +298,13 @@ public:
       else if(to_delete->parent->right == to_delete) to_delete->parent->right = left;
       else to_delete->parent->left = left;
     }
+    delete to_delete;
+    size--;
   }
 
   void remove(const const_iterator& it)
   {
+    if(it.pointed == nullptr) throw std::out_of_range("out_of_range");
     remove(it.pointed->data.first);
   }
 
@@ -330,21 +388,25 @@ public:
 
   ConstIterator& operator++()
   {
-    if(pointed == nullptr)
-      throw std::out_of_range("out_of_range");
-    if(pointed->right != nullptr)
+    if(pointed == nullptr) throw std::out_of_range("incrementing end");
+    else
     {
-      pointed = pointed->right;
-      while(pointed->right != nullptr)
-        pointed = pointed->right;
-      return *this;
-    }
-    while(pointed->parent != nullptr)
-    {
-      node* previous = pointed;
-      pointed = pointed->parent;
-      if(pointed->left == previous)
+      if(pointed->right == nullptr)
+      {
+      node* prev = pointed;
+        for(; pointed->parent!=nullptr;)
+        {
+            pointed=pointed->parent;
+            if(pointed->left == prev) return *this;
+            prev = pointed;
+        }
+      }
+      else
+      {
+        for(; pointed->right!=nullptr; pointed=pointed->right)
+            {}
         return *this;
+      }
     }
     pointed = nullptr;
     return *this;
@@ -359,29 +421,33 @@ public:
 
   ConstIterator& operator--()
   {
-  if(pointed == nullptr)
-  {
+    if(pointed == nullptr)
+    {
+      if(maximal == nullptr) throw std::out_of_range("decrementing begin");
       pointed = maximal;
       return *this;
-  }
-
-  if(pointed->left != nullptr)
-  {
-    pointed = pointed->left;
-    while(pointed->left != nullptr)
-      pointed = pointed->left;
+    }
+    else
+    {
+      if(pointed->left == nullptr)
+      {
+      node* prev = pointed;
+        for(; pointed->parent!=nullptr;)
+        {
+            pointed=pointed->parent;
+            if(pointed->right == prev) return *this;
+            prev = pointed;
+        }
+      }
+      else
+      {
+        for(; pointed->left!=nullptr; pointed=pointed->left)
+            {}
+        return *this;
+      }
+    }
+    throw std::out_of_range("decrementing begin");
     return *this;
-  }
-  while(pointed->parent != nullptr)
-  {
-    node* previous = pointed;
-    pointed = pointed->parent;
-    if(pointed->right == previous)
-      return *this;
-  }
-
-  throw std::out_of_range("out_of_range");
-
   }
 
   ConstIterator operator--(int)
@@ -389,7 +455,6 @@ public:
     auto old = ConstIterator(pointed,maximal);
     operator--();
     return old;
-    }
 
     throw std::out_of_range("out_of_range");
   }
@@ -408,7 +473,16 @@ public:
 
   bool operator==(const ConstIterator& other) const
   {
-    return pointed == other.pointed;
+    bool iif = 1;
+    if(pointed == nullptr || other.pointed == nullptr)
+    {
+      if(!(pointed == nullptr && other.pointed == nullptr))
+        iif = 0;
+    }
+    else
+      iif = pointed->data == other.pointed->data;
+
+    return iif;
   }
 
   bool operator!=(const ConstIterator& other) const

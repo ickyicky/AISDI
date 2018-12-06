@@ -1,6 +1,5 @@
 #ifndef AISDI_MAPS_HASHMAP_H
 #define AISDI_MAPS_HASHMAP_H
-#define MAX_HASH 2047
 
 #include <cstddef>
 #include <initializer_list>
@@ -30,6 +29,7 @@ private:
   class Node
   {
   public:
+
     value_type data;
     size_type hash;
     Node* previous;
@@ -44,6 +44,7 @@ private:
   size_type biggest_hash;
   size_type smallest_hash;
   size_type max_hash;
+  static const size_t MAX_HASH =  20470;
 
   size_type hashfun(key_type key) const
   {
@@ -88,6 +89,7 @@ private:
 
   void clear()
   {
+    if(buffer == nullptr) return;
     for(size_type i = 0; i < MAX_HASH; i++)
     {
         Node* current = buffer[i];
@@ -141,6 +143,12 @@ public:
     other.size = other.max_hash = other.biggest_hash = other.smallest_hash = 0;
   }
 
+  ~HashMap()
+  {
+    clear();
+    delete[] buffer;
+  }
+
   HashMap& operator=(const HashMap& other)
   {
     if(&other == this) return *this;
@@ -155,6 +163,7 @@ public:
     if(&other != this)
     {
         clear();
+        delete[] buffer;
         buffer = other.buffer;
         size= other.size;
         biggest_hash = other.biggest_hash;
@@ -322,13 +331,14 @@ public:
     if(node->next == nullptr)
     {
       auto hash = node->hash + 1;
-      while(buffer[hash] == nullptr)
+      while(1)
       {
         if(hash >= MAX_HASH-1)
         {
           node = nullptr;
           return *this;
         }
+        if(buffer[hash] != nullptr) break;
         hash++;
       }
       node = buffer[hash];
@@ -365,13 +375,14 @@ public:
     if(node->previous == nullptr)
     {
       auto hash = node->hash - 1;
-      while(buffer[hash] == nullptr)
+      while(1)
       {
         if(hash<=0)
         {
           hash = 0;
           break;
         }
+        if(buffer[hash] != nullptr) break;
         hash--;
       }
       node = buffer[hash];
@@ -401,11 +412,11 @@ public:
 
   bool operator==(const ConstIterator& other) const
   {
-    bool iif = 1;
+    bool iif = 0;
     if(node == nullptr || other.node == nullptr)
     {
-      if(!(node == nullptr && other.node == nullptr))
-        iif = 0;
+      if(node == nullptr && other.node == nullptr)
+        iif = 1;
     }
     else
       iif = node->data == other.node->data;
