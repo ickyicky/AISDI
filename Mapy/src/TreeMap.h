@@ -33,9 +33,10 @@ private:
     node* left;
     node* right;
     node* parent;
+    size_t balance_factor;
 
     node(value_type data, node* left=nullptr, node* right=nullptr, node* parent=nullptr):
-          data(data), left(left), right(right), parent(parent)
+          data(data), left(left), right(right), parent(parent), balance_factor(0)
     {}
 
   };
@@ -56,30 +57,30 @@ private:
     {
       auto backup = current;
       if(current->data.first == v.first) break;
-      if(current->data.first > v.first)
+      if(current->data.first > v.first) //wstawienie w jako lewe dziecko
       {
         current = current->left;
         if(current == nullptr)
         {
           current = new node(v,nullptr,nullptr,backup);
           backup->left = current;
-          size++;
-          balance(backup);
-          break;
+          backup->balance_factor--;
         }
       }
-      else
+      else //jako prawe
       {
         current = current->right;
         if(current == nullptr)
         {
           current = new node(v,nullptr,nullptr,backup);
           backup->right = current;
-          balance(backup);
-          size++;
-          break;
+          backup->balance_factor++;
+
         }
       }
+      size++;
+      balance(backup);
+      break;
     }
 
     return current;
@@ -106,48 +107,41 @@ private:
     return current;
   }
 
-  size_t deph(node* x)
-  {
-    if(x == nullptr) return 0;
-    size_t left = deph(x->left);
-    size_t right = deph(x->right);
-    size_t max = left>right? left: right;
-    return 1 + max;
-  }
-
   void balance(node* x)
     {
 	for(auto i = x; i!=nullptr; i=i->parent)
 	{
-		size_t dright = deph(x->right);
-		size_t dleft = deph(x->left);
 		auto left = x->left;
 		auto right = x->right;
 
-		if( dleft > dright + 1 )
+		if( x->balance_factor >= 2 ) //rotacja w prawo
 		{
 			if( x->parent != nullptr)
 				x->parent = left;
-			else root = left;
-				left->parent = x->parent;
-
+			else 
+				root = left;
+			
+			left->parent = x->parent;
 			x->left = left->right;
-			if(left->right != nullptr) left->right->parent = x;
-				x->parent = left;
+			if(left->right != nullptr) 
+				left->right->parent = x;
+			x->parent = left;
 			left->right = x;
 
 			break;
 		}
-		else if( dright > dleft + 1 )
+		else if( x->balance_factor <= -2) //rotacja w lewo
 		{
 			if( x->parent != nullptr)
 				x->parent = right;
-			else root = right;
-				right->parent = x->parent;
-
+			else 
+				root = right;
+			
+			right->parent = x->parent;
 			x->right = right->left;
-			if(right->left != nullptr) right->left->parent = x;
-				x->parent = right;
+			if(right->left != nullptr) 
+				right->left->parent = x;
+			x->parent = right;
 			right->left = x;
 			break;
 		}
