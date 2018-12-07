@@ -65,7 +65,6 @@ private:
           backup->left = current;
           size++;
           balance(backup);
-          if(backup != root) balance(root);
           break;
         }
       }
@@ -77,7 +76,6 @@ private:
           current = new node(v,nullptr,nullptr,backup);
           backup->right = current;
           balance(backup);
-          if(backup != root) balance(root);
           size++;
           break;
         }
@@ -119,36 +117,41 @@ private:
 
   void balance(node* x)
     {
-      if(x == nullptr) return;
-      size_t dright = deph(x->right);
-      size_t dleft = deph(x->left);
-      auto left = x->left;
-      auto right = x->right;
+	for(auto i = x; i!=nullptr; i=i->parent)
+	{
+		size_t dright = deph(x->right);
+		size_t dleft = deph(x->left);
+		auto left = x->left;
+		auto right = x->right;
 
-      if( dleft > dright + 1 )
-      {
-        if( x->parent != nullptr)
-          x->parent = left;
-        else root = left;
-        left->parent = x->parent;
+		if( dleft > dright + 1 )
+		{
+			if( x->parent != nullptr)
+				x->parent = left;
+			else root = left;
+				left->parent = x->parent;
 
-        x->left = left->right;
-        if(left->right != nullptr) left->right->parent = x;
-        x->parent = left;
-        left->right = x;
-      }
-      else if( dright > dleft + 1 )
-      {
-        if( x->parent != nullptr)
-          x->parent = right;
-        else root = right;
-        right->parent = x->parent;
+			x->left = left->right;
+			if(left->right != nullptr) left->right->parent = x;
+				x->parent = left;
+			left->right = x;
 
-        x->right = right->left;
-        if(right->left != nullptr) right->left->parent = x;
-        x->parent = right;
-        right->left = x;
-      }
+			break;
+		}
+		else if( dright > dleft + 1 )
+		{
+			if( x->parent != nullptr)
+				x->parent = right;
+			else root = right;
+				right->parent = x->parent;
+
+			x->right = right->left;
+			if(right->left != nullptr) right->left->parent = x;
+				x->parent = right;
+			right->left = x;
+			break;
+		}
+	  }
     }
 
   node* minimum(node* x) const
