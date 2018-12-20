@@ -9,89 +9,96 @@
 
 namespace
 {
-void perfomTest(size_t amount)
+void perfomTest()
 {
   //ugly, yet practical test
   using namespace std::chrono;
-  if(amount > 100000000) amount = 100000000;
-  else if(amount < 10) amount = 10;
 
   aisdi::TreeMap<int, std::string> tree;
   aisdi::HashMap<int, std::string> hash;
 
   std::string el = "asd";
-
+  auto time = 0;
+  int maxtree,maxhash;
   //inserting
-  high_resolution_clock::time_point t1 = high_resolution_clock::now();
-  for(size_t count = 0; count <= amount; count++)
+  size_t amount = 4096;
+  while(time < 10000)
   {
-    tree[count] = el;
+    tree = aisdi::TreeMap<int, std::string>{};
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    for(size_t count = 0; count <= amount; count++)
+    {
+      tree[count] = el;
+    }
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+
+    time = duration_cast<milliseconds>( t2 - t1 ).count();
+    std::cout<<amount<<"operations took:"<<time<<" ";
+    maxtree = amount;
+    amount*=2;
   }
-  high_resolution_clock::time_point t2 = high_resolution_clock::now();
+  std::cout <<std::endl;
 
-  auto tree_time = duration_cast<milliseconds>( t2 - t1 ).count();
-
-  high_resolution_clock::time_point t3 = high_resolution_clock::now();
-  for(size_t count = 0; count <= amount; count++)
+  time = 0;
+  amount = 4096;
+  while(time < 10000)
   {
-    hash[count] = el;
+    hash = aisdi::HashMap<int, std::string>{};
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    for(size_t count = 0; count <= amount; count++)
+    {
+      hash[count] = el;
+    }
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+
+    time = duration_cast<milliseconds>( t2 - t1 ).count();
+    std::cout<<amount<<"operations took:"<<time<<" ";
+    maxhash = amount;
+    amount*=2;
   }
-  high_resolution_clock::time_point t4 = high_resolution_clock::now();
-
-  auto hash_time = duration_cast<milliseconds>( t4 - t3 ).count();
-
-  std::cout<<"Inserting "<<amount<<" elements took"<<std::endl<<
-              tree_time<<" in treemap"<<std::endl<<
-              hash_time<<" in hashmap"<<std::endl;
+  std::cout <<std::endl;
 
   //accesing
-  t1 = high_resolution_clock::now();
-  for(size_t count = 0; count <= amount; count++)
+  time = 0;
+  amount = 4096;
+
+  while(time < 1000)
   {
-    //tree.valueOf(count);
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    for(size_t count = 0; count <= amount; count++)
+    {
+      tree.valueOf(count%maxtree);
+    }
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+
+    time = duration_cast<milliseconds>( t2 - t1 ).count();
+    std::cout<<amount<<"operations took:"<<time<<" ";
+    amount*=2;
   }
-  t2 = high_resolution_clock::now();
+  std::cout <<std::endl;
 
-  tree_time = duration_cast<milliseconds>( t2 - t1 ).count();
-
-  t3 = high_resolution_clock::now();
-  for(size_t count = 0; count <= amount; count++)
+  time = 0;
+  amount = 4096;
+  while(time < 1000)
   {
-    hash.valueOf(count);
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    for(size_t count = 0; count <= amount; count++)
+    {
+      hash.valueOf(count%maxhash);
+    }
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+
+    time = duration_cast<milliseconds>( t2 - t1 ).count();
+    std::cout<<amount<<"operations took:"<<time<<" ";
+    amount*=2;
   }
-  t4 = high_resolution_clock::now();
-
-  hash_time = duration_cast<milliseconds>( t4 - t3 ).count();
-
-  std::cout<<"Accesing "<<amount<<" elements took"<<std::endl<<
-              tree_time<<" in treemap"<<std::endl<<
-              hash_time<<" in hashmap"<<std::endl;
-
-  //iterating
-  t1 = high_resolution_clock::now();
-  for(auto i = tree.begin(); i != tree.end() ; i++)
-  {}
-  t2 = high_resolution_clock::now();
-
-  tree_time = duration_cast<milliseconds>( t2 - t1 ).count();
-
-  t3 = high_resolution_clock::now();
-  for(auto i = hash.begin(); i != hash.end() ; i++)
-  {}
-  t4 = high_resolution_clock::now();
-
-  hash_time = duration_cast<milliseconds>( t4 - t3 ).count();
-
-  std::cout<<"Iterating through "<<amount<<" elements took"<<std::endl<<
-              tree_time<<" in treemap"<<std::endl<<
-              hash_time<<" in hashmap"<<std::endl<<std::endl<<std::endl<<std::endl;
+  std::cout <<std::endl;
 }
 
 } // namespace
 
 int main()
 {
-  for(size_t amount=10000; amount<=100000 ; amount*=10)
-    perfomTest(amount);
+  perfomTest();
   return 0;
 }

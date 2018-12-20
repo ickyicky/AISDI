@@ -5,6 +5,9 @@
 #include <initializer_list>
 #include <stdexcept>
 #include <utility>
+#include <functional>//dla funkcji haszujacej
+#include <vector>
+#include <list>
 
 namespace aisdi
 {
@@ -19,6 +22,9 @@ public:
   using size_type = std::size_t;
   using reference = value_type&;
   using const_reference = const value_type&;
+  using list = std::list<value_type>;
+  using vector = std::vector<list>;
+  using vector_i = typename vector::const_iterator;
 
   class ConstIterator;
   class Iterator;
@@ -26,217 +32,178 @@ public:
   using const_iterator = ConstIterator;
 
 private:
-  class Node
-  {
-  public:
-
-    value_type data;
-    size_type hash;
-    Node* previous;
-    Node* next;
-    Node(value_type data, size_type hash, Node* previous=nullptr, Node* next=nullptr):
-          data(data), hash(hash), previous(previous), next(next)
-    {}
-  };
-
-  Node** buffer;
+  vector hash_vector;
   size_type size;
-  size_type biggest_hash;
-  size_type smallest_hash;
   size_type max_hash;
-  static const size_t MAX_HASH =  20470;
+  const double MAX_HASH_TO_SIZE = 1.5;
+  const size_type START_HASH = 10;
 
-  size_type hashfun(key_type key) const
+  size_type hashfun(const key_type key) const
   {
-    auto hash = std::hash<key_type>{}(key) % MAX_HASH;
+    auto hash = std::hash<key_type>{}(key) % max_hash;
     return hash;
   }
 
-  Node* ffind(key_type key) const
+  void resize()
   {
-    size_type hash = hashfun(key);
-    auto found = buffer[hash];
-    while(1)
-    {
-      if(found == nullptr) return nullptr;
-      if(found->data.first == key) break;
-      found = found->next;
-    }
-    return found;
-  }
+    if(size / max_hash <= MAX_HASH_TO_SIZE)
+      return;
 
-  Node* insert(key_type key)
-  {
-    value_type value = value_type(key, mapped_type{});
-    return insert(value);
-  }
+    //w innyn przypadku, analogicznie do 1 projektu, zwiekszam pojemnosc kontenera "hashy" dwukrotnie
+    max_hash *= 2;
+    vector new_hash_vector;
+    new_hash_vector.resize(max_hash);
+    for(auto& hash_list: hash_vector)
+      for(auto& element: hash_list)
+        new_hash_vector[element.first].push_back(element);
 
-  Node* insert(value_type value)
-  {
-    size_type hash = hashfun(value.first);
-    if(hash > biggest_hash) biggest_hash = hash;
-    if(hash < smallest_hash) smallest_hash = hash;
-    Node* newnode = new Node(value,hash,nullptr,nullptr);
-    if(buffer[hash] != nullptr)
-    {
-      buffer[hash]->previous = newnode;
-      newnode->next = buffer[hash];
-    }
-    buffer[hash] = newnode;
-    size++;
-    return newnode;
-  }
-
-  void clear()
-  {
-    if(buffer == nullptr) return;
-    for(size_type i = 0; i < MAX_HASH; i++)
-    {
-        Node* current = buffer[i];
-        while(1)
-        {
-            if(current == nullptr) break;
-            Node* temp = current;
-            current = current->next;
-            delete temp;
-        }
-        buffer[i] = nullptr;
-    }
-    size = biggest_hash = 0;
-    smallest_hash = MAX_HASH-1;
+    hash_vector.clear();
+    hash_vector = std::move(new_hash_vector);
   }
 
 public:
   HashMap()
   {
     size = 0;
-    biggest_hash = 0;
-    smallest_hash = MAX_HASH-1;
-    max_hash = MAX_HASH;
-    buffer = new Node*[max_hash];
-    for(size_type i =0;i<max_hash;i++)
-      buffer[i] = nullptr;
+    max_hash = START_HASH;
+    hash_vector.resize(max_hash);
   }
 
-  HashMap(std::initializer_list<value_type> list): size(0), biggest_hash(0),smallest_hash(MAX_HASH-1), max_hash(MAX_HASH)
+  HashMap(std::initializer_list<value_type> list)
   {
-    buffer = new Node*[max_hash];
-    for(size_type i =0;i<max_hash;i++)
-      buffer[i] = nullptr;
-    for(auto i=list.begin(); i!=list.end(); i++ )
-      insert(*i);
+    size = 0;
+    max_hash = list.size() > START_HASH? list.size() * 2: START_HASH;
+    hash_vector.resize(max_hash);
+    for(auto i = list.begin(); i != list.end(); i++)
+      operator[]((*i).first) = (*i).second;
   }
 
-  HashMap(const HashMap& other): size(0), biggest_hash(0),smallest_hash(MAX_HASH-1), max_hash(MAX_HASH)
+  HashMap(const HashMap& other)
   {
-    buffer = new Node*[max_hash];
-    for(size_type i =0;i<max_hash;i++)
-      buffer[i] = nullptr;
-    for(auto i=other.begin(); i!=other.end(); i++ )
-      insert(*i);
+    size = 0;
+    max_hash = other.max_hash;
+    hash_vector.resize(max_hash);
+    for(auto i = other.begin(); i != other.end(); i++)
+      operator[](i->first) = i->second;
   }
 
-  HashMap(HashMap&& other):
-  buffer(other.buffer), size(other.size), biggest_hash(other.biggest_hash),smallest_hash(other.smallest_hash), max_hash(other.max_hash)
+  HashMap(HashMap&& other)
   {
-    other.buffer = nullptr;
-    other.size = other.max_hash = other.biggest_hash = other.smallest_hash = 0;
-  }
-
-  ~HashMap()
-  {
-    clear();
-    delete[] buffer;
+    size = 0;
+    max_hash = START_HASH;
+    hash_vector.resize(max_hash);
+    std::swap(size, other.size);
+    std::swap(max_hash, other.max_hash);
+    std::swap(hash_vector, other.hash_vector);
   }
 
   HashMap& operator=(const HashMap& other)
   {
-    if(&other == this) return *this;
-    clear();
-    for(auto i=other.begin(); i!=other.end(); i++ )
-      insert(*i);
+    if(this == &other)
+      return *this;
+    hash_vector.clear();
+    max_hash = other.max_hash;
+    hash_vector.resize(max_hash);
+    size = 0;
+    for(auto i = other.begin(); i != other.end(); i++)
+      operator[](i->first) = i->second;
+
     return *this;
   }
 
   HashMap& operator=(HashMap&& other)
   {
-    if(&other != this)
-    {
-        clear();
-        delete[] buffer;
-        buffer = other.buffer;
-        size= other.size;
-        biggest_hash = other.biggest_hash;
-        smallest_hash = other.smallest_hash;
-    }
-    other.buffer = nullptr;
-    other.size = other.max_hash = other.biggest_hash = other.smallest_hash = 0;
-
+    if(this == &other)
+      return *this;
+    hash_vector.clear();
+    size = 0;
+    std::swap(size, other.size);
+    std::swap(max_hash, other.max_hash);
+    std::swap(hash_vector, other.hash_vector);
     return *this;
   }
 
   bool isEmpty() const
   {
-    return size==0;
+    return size == 0;
   }
 
   mapped_type& operator[](const key_type& key)
   {
-    auto found = ffind(key);
-    if(found == nullptr)
-      found = insert(key);
+    auto found = find(key);
+    if(found == end())
+    {
+      //jesli nie ma takiego elementu, wstawiamy:
+      size_type hash = hashfun(key);
 
-    return found->data.second;
+      hash_vector[hash].push_back(value_type{key, mapped_type{}});
+      ++size;
+      resize();
+    }
+
+    return valueOf(key);
   }
 
   const mapped_type& valueOf(const key_type& key) const
   {
-    auto found = ffind(key);
-    if(found == nullptr)
-      throw std::out_of_range("out");
-
-    return found->data.second;
+    auto found = find(key);
+    if(found == cend())
+      throw std::out_of_range("invalid key");
+    return found->second;
   }
 
   mapped_type& valueOf(const key_type& key)
   {
-    auto found = ffind(key);
-    if(found == nullptr)
-      throw std::out_of_range("out");
+    size_type hash = hashfun(key);
+    for(auto& element: hash_vector[hash])
+      if(element.first == key)
+        return element.second;
 
-    return found->data.second;
+    throw std::out_of_range("invalid key");
   }
 
   const_iterator find(const key_type& key) const
   {
-    return const_iterator(ffind(key), buffer);
+    size_type hash = hashfun(key);
+
+    for(auto i = hash_vector[hash].begin(); i != hash_vector[hash].end(); ++i)
+      if((*i).first == key)
+        return const_iterator(hash_vector.begin() + hash, i, hash_vector.begin(), hash_vector.end());
+
+    return cend();
   }
 
   iterator find(const key_type& key)
   {
-    return iterator(ffind(key), buffer);
+    size_type hash = hashfun(key);
+
+    for(auto i = hash_vector[hash].begin(); i != hash_vector[hash].end(); ++i)
+      if((*i).first == key)
+        return iterator(hash_vector.begin() + hash, i, hash_vector.begin(), hash_vector.end());
+
+    return end();
   }
 
   void remove(const key_type& key)
   {
-    auto to_remove = ffind(key);
-    if(to_remove == nullptr)
-      throw std::out_of_range("out");
+    list found_list = hash_vector[hashfun(key)];
+    for(auto i = found_list.begin(); i != found_list.end(); i++)
+    {
+      if((*i).first == key)
+      {
+        found_list.erase(i);
+        --size;
+        return;
+      }
+    }
 
-    if(to_remove->previous == nullptr)
-      buffer[to_remove->hash] = to_remove->next;
-    else
-      to_remove->previous = to_remove->next;
-
-    if(to_remove->next != nullptr)
-      to_remove->next = to_remove->previous;
-
-    delete to_remove;
-    size--;
+  throw std::out_of_range("invalid key");
   }
 
   void remove(const const_iterator& it)
   {
+    if(it == end())
+      throw std::out_of_range("invalid iterator");
     remove(it->first);
   }
 
@@ -247,17 +214,20 @@ public:
 
   bool operator==(const HashMap& other) const
   {
-    auto i1 = begin();
-    auto i2 = other.begin();
-    while(1)
+    if(size != other.size)
+      return false;
+
+    auto i1 = cbegin();
+    auto i2 = other.cbegin();
+    while(true)
     {
-      if(i1 != i2) return 0;
-      if((i1 == end()) && (i2 == other.end())) return 1;
-      if((i1 == end()) || (i2 == other.end())) return 0;
+      if(i1 != i2) return false;
+      if((i1 == cend()) && (i2 == other.cend())) return true;
+      if((i1 == cend()) || (i2 == other.cend())) return false;
       i1++;
       i2++;
     }
-    return 0;
+    return false;
   }
 
   bool operator!=(const HashMap& other) const
@@ -267,24 +237,34 @@ public:
 
   iterator begin()
   {
-    if(isEmpty()) return end();
-    return iterator(buffer[smallest_hash],buffer);
+    if(isEmpty())
+      return end();
+
+    iterator beggining = iterator(hash_vector.begin(), hash_vector[0].begin(), hash_vector.begin(), hash_vector.end());
+    if(hash_vector[0].size() != 0)
+      return beggining;
+    return ++beggining;
   }
 
   iterator end()
   {
-    return iterator(nullptr,buffer);
+    return iterator(hash_vector.end(), hash_vector[max_hash-1].end(), hash_vector.begin(), hash_vector.end());
   }
 
   const_iterator cbegin() const
   {
-    if(isEmpty()) return cend();
-    return const_iterator(buffer[smallest_hash],buffer) ;
+    if(isEmpty())
+      return end();
+
+    iterator beggining = const_iterator(hash_vector.begin(), hash_vector[0].begin(), hash_vector.begin(), hash_vector.end());
+    if(hash_vector[0].size() != 0)
+      return beggining;
+    return ++beggining;
   }
 
   const_iterator cend() const
   {
-    return const_iterator(nullptr,buffer) ;
+    return ConstIterator(hash_vector.end(), hash_vector[max_hash-1].end(), hash_vector.begin(), hash_vector.end());
   }
 
   const_iterator begin() const
@@ -306,103 +286,103 @@ public:
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = typename HashMap::value_type;
   using pointer = const typename HashMap::value_type*;
+  using list_i = typename HashMap::list::const_iterator;
+  using vector_i = typename HashMap::vector_i;
 
 private:
-  Node* node;
+  vector_i current_list;
+  list_i current;
+  //potrzeba jakos okreslic poczatek i koniec dostepnego bufora, stad:
+  vector_i v_begin;
+  vector_i v_end;
+
   friend class HashMap<KeyType, ValueType>;
-  Node** buffer;
+
 
 public:
-
-  explicit ConstIterator(Node* node=nullptr, Node** buffer=nullptr): node(node), buffer(buffer)
+  explicit ConstIterator(vector_i vector_it, list_i list_it, vector_i vb, vector_i ve)
+  : current_list(vector_it), current(list_it), v_begin(vb), v_end(ve)
   {}
 
   ConstIterator(const ConstIterator& other)
   {
-    node = other.node;
-    buffer = other.buffer;
+    current_list = other.current_list;
+    current = other.current;
+    v_begin = other.v_begin;
+    v_end = other.v_end;
   }
 
   ConstIterator& operator++()
   {
-    if(node == nullptr)
-      throw std::out_of_range("out");
+    if(current_list == v_end)
+      throw std::out_of_range("cant increment end iterator");
 
-    if(node->next == nullptr)
+    current++;
+    if((*current_list).size() == 0 || current == (*current_list).end())
     {
-      auto hash = node->hash + 1;
-      while(1)
+      current_list++;
+      for(; current_list != v_end; current_list++)
       {
-        if(hash >= MAX_HASH-1)
+        if((*current_list).size() != 0)
         {
-          node = nullptr;
+          current = (*current_list).begin();
           return *this;
         }
-        if(buffer[hash] != nullptr) break;
-        hash++;
       }
-      node = buffer[hash];
+
+      current_list = v_end;
+      current = (*(current_list-1)).end();
     }
-    else node = node->next;
     return *this;
   }
 
   ConstIterator operator++(int)
   {
-    auto old = ConstIterator(node, buffer);
+    auto old = ConstIterator(current_list, current, v_begin, v_end);
     operator++();
     return old;
   }
 
   ConstIterator& operator--()
   {
-    if(node == nullptr)
-    {
-      size_t i = MAX_HASH - 1;
-      while(i-- > 0)
-      {
-        if(buffer[i] == nullptr)
-          continue;
-        auto x = buffer[i];
-        while(x->next != nullptr)
-          x = x->next;
-        node = x;
-        return *this;
-      }
-      throw std::out_of_range("out");
-    }
+    if(current_list == v_end)
+      current_list--;
 
-    if(node->previous == nullptr)
+    if(current == (*current_list).begin())
     {
-      auto hash = node->hash - 1;
-      while(1)
+      if(current_list == v_begin)
+        throw std::out_of_range("cant increment begin iterator");
+
+      current_list--;
+      for(;current_list != v_begin; current_list--)
       {
-        if(hash<=0)
+        if((*current_list).size() != 0)
         {
-          hash = 0;
-          break;
+          current = --(*current_list).end();
+          return *this;
         }
-        if(buffer[hash] != nullptr) break;
-        hash--;
       }
-      node = buffer[hash];
+
+      throw std::out_of_range("cant decrement begin");
     }
-    else node = node->previous;
+    else
+      current--;
     return *this;
   }
 
   ConstIterator operator--(int)
   {
-    auto old = ConstIterator(node, buffer);
+    auto old = ConstIterator(current_list, current, v_begin, v_end);
     operator--();
     return old;
   }
 
   reference operator*() const
   {
-    if(node == nullptr)
-      throw std::out_of_range("out_of_range");
-    return node->data;
+    if(current_list == v_end)
+      throw std::out_of_range("cant acces end element");
+
+    return *current;
   }
 
   pointer operator->() const
@@ -412,22 +392,16 @@ public:
 
   bool operator==(const ConstIterator& other) const
   {
-    bool iif = 0;
-    if(node == nullptr || other.node == nullptr)
-    {
-      if(node == nullptr && other.node == nullptr)
-        iif = 1;
-    }
-    else
-      iif = node->data == other.node->data;
-
-    return iif;
+    if(v_end == current_list || other.v_end == other.current_list)
+        return (v_end == current_list && other.v_end == other.current_list);
+    return ( *current == *(other.current) );
   }
 
   bool operator!=(const ConstIterator& other) const
   {
     return !(*this == other);
   }
+
 };
 
 template <typename KeyType, typename ValueType>
@@ -435,9 +409,15 @@ class HashMap<KeyType, ValueType>::Iterator : public HashMap<KeyType, ValueType>
 {
 public:
   using reference = typename HashMap::reference;
+  using iterator_category = std::bidirectional_iterator_tag;
+  using value_type = typename HashMap::value_type;
   using pointer = typename HashMap::value_type*;
+  using list_i = typename HashMap::list::iterator;
+  using vector_i = typename HashMap::vector_i;
 
-  explicit Iterator(Node* node=nullptr, Node** buffer=nullptr) : ConstIterator(node, buffer)
+
+  explicit Iterator(vector_i vector_it, list_i list_it, vector_i vb, vector_i ve):
+  ConstIterator(vector_it, list_it, vb, ve)
   {}
 
   Iterator(const ConstIterator& other)
