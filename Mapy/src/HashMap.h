@@ -36,7 +36,7 @@ private:
   size_type size;
   size_type max_hash;
   const double MAX_HASH_TO_SIZE = 1.5;
-  const size_type START_HASH = 10;
+  const size_type START_HASH = 1024;
 
   size_type hashfun(const key_type key) const
   {

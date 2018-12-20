@@ -56,29 +56,54 @@ private:
     while(current != nullptr)
     {
       auto backup = current;
-      int dir;
       if(current->data.first == v.first) break;
 
-      if(current->data.first > v.first) //wstawienie w jako lewe dziecko
-      {
+      if(current->data.first > v.first)
         current = current->left;
-        dir = -1;
-      }
-      else //jako prawe
-      {
+      else
         current = current->right;
-        dir = 1;
-      }
 
       if(current == nullptr)
       {
-        node* newnode = new node(v, nullptr, nullptr, backup);
-        insert(newnode, backup, dir);
-        return newnode;
+        current = new node(v, nullptr, nullptr, backup);
+        size++;
+
+        if(backup->data.first > v.first)
+          backup->left = current;
+        else
+          backup->right = current;
+
+        while(backup != nullptr)
+        {
+          if(current == backup->right)
+            ++backup->balance_factor;
+          else
+            --backup->balance_factor;
+
+          if(backup->balance_factor == 2)
+          {
+            if(current->balance_factor == 1)
+              rotate_left(backup);
+            else
+              rotate_right_left(backup);
+            break;
+          }
+          if(backup->balance_factor == -2)
+          {
+            if(current->balance_factor == -1)
+              rotate_right(backup);
+            else
+              rotate_left_right(backup);
+            break;
+          }
+
+          current = backup;
+          backup = backup->parent;
+        }
+        return ofind(v.first);
       }
     }
-
-    return current;
+    return root;
   }
 
   node* ffind(const key_type& key)
@@ -115,95 +140,59 @@ private:
     rotate_right(node);
   }
 
-  void rotate_left(node* node)
+  void rotate_left(node* current)
   {
-    if(node == nullptr)
+    if(current == nullptr)
       return;
 
-    auto right = node->right;
-    node->right = right->left;
+    node *right = current->right;
+    current->right = right->left;
     if(right->left != nullptr)
-      right->left->parent = node;
-    if(node == root)
+      right->left->parent = current;
+    if(current == root)
       root = right;
-    else if(node == node->parent->left)
-      node->parent->left = right;
+    else if(current == current->parent->left)
+      current->parent->left = right;
     else
-      node->parent->right = right;
-    right->left = node;
-    right->parent = node->parent;
-    node->parent = right;
+      current->parent->right = right;
+    right->left = current;
+    right->parent = current->parent;
+    current->parent = right;
 
     if(right->balance_factor == 1)
-      node->balance_factor = 0;
+      current->balance_factor = 0;
     else
-      node->balance_factor = -1;
+      current->balance_factor = -1;
 
     right->balance_factor--;
+
   }
 
-  void rotate_right(node* node)
+  void rotate_right(node* current)
   {
-    if(node == nullptr)
+    if(current == nullptr)
       return;
 
-    auto left = node->left;
-    node->left = left->right;
+    node* left = current->left;
+    current->left = left->right;
     if(left->right != nullptr)
-      left->right->parent = node;
-    if(node == root)
+      left->right->parent = current;
+    if(current == root)
       root = left;
-    else if(node == node->parent->right)
-      node->parent->right = left;
+    else if(current == current->parent->right)
+      current->parent->right = left;
     else
-      node->parent->left = left;
-    left->left = node;
-    left->parent = node->parent;
-    node->parent = left;
+      current->parent->left = left;
+    left->left = current;
+    left->parent = current->parent;
+    current->parent = left;
 
     if(left->balance_factor == -1)
-      node->balance_factor = 0;
+      current->balance_factor = 0;
     else
-      node->balance_factor = 1;
+      current->balance_factor = 1;
 
     left->balance_factor++;
-  }
-
-  void insert(node* child, node* backup, int dir)
-  {
-    if(dir == 1)
-      backup->right = child;
-    else
-      backup->left = child;
-
-    while(backup != nullptr)
-    {
-      if(child == backup->right)
-        backup->balance_factor += 1;
-      else
-        backup->balance_factor -= 1;
-
-      if(backup->balance_factor == 2)
-      {
-        if(child->balance_factor == 1)
-          rotate_left(backup);
-        else
-          rotate_right_left(backup);
-        break;
-      }
-      if(backup->balance_factor == -2)
-      {
-        if(child->balance_factor == -1)
-          rotate_right(backup);
-        else
-          rotate_left_right(backup);
-        break;
-      }
-
-      child = backup;
-      backup = backup->parent;
-    }
-    size++;
   }
 
   node* minimum(node* x) const
@@ -364,8 +353,8 @@ public:
 
   TreeMap(std::initializer_list<value_type> list): root(nullptr), size(0)
   {
-    for(auto i = list.begin(); i != list.end(); i++)
-      ffind(*i);
+    for(auto &i: list)
+      ffind(i);
   }
 
   TreeMap(const TreeMap& other): root(nullptr), size(0)
@@ -548,7 +537,7 @@ public:
       if(pointed->right == nullptr)
       {
         node* prev = pointed;
-        for(; pointed->parent!=nullptr;)
+        while(pointed->parent!=nullptr)
         {
             pointed=pointed->parent;
             if(pointed->left == prev) return *this;
@@ -557,8 +546,10 @@ public:
       }
       else
       {
-        while(pointed->right!=nullptr)
-          pointed=pointed->right;
+        pointed = pointed->right;
+        if(pointed!=nullptr)
+          while(pointed->left!=nullptr)
+            pointed=pointed->left;
         return *this;
       }
     }
@@ -586,7 +577,7 @@ public:
       if(pointed->left == nullptr)
       {
         node* prev = pointed;
-        for(; pointed->parent!=nullptr;)
+        while(pointed->parent!=nullptr)
         {
             pointed=pointed->parent;
             if(pointed->right == prev) return *this;
@@ -595,8 +586,10 @@ public:
       }
       else
       {
-        for(; pointed->left!=nullptr; pointed=pointed->left)
-            {}
+        pointed = pointed->left;
+        if(pointed!=nullptr)
+          while(pointed->right!=nullptr)
+            pointed=pointed->right;
         return *this;
       }
     }
@@ -627,16 +620,10 @@ public:
 
   bool operator==(const ConstIterator& other) const
   {
-    bool iif = 1;
     if(pointed == nullptr || other.pointed == nullptr)
-    {
-      if(!(pointed == nullptr && other.pointed == nullptr))
-        iif = 0;
-    }
-    else
-      iif = pointed->data == other.pointed->data;
+      return pointed == nullptr && other.pointed == nullptr;
 
-    return iif;
+    return pointed->data == other.pointed->data;
   }
 
   bool operator!=(const ConstIterator& other) const
